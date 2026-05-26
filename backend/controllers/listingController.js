@@ -1,8 +1,8 @@
 const { validationResult } = require('express-validator');
 const Listing = require('../models/Listing');
-const { getRedisClient } = require('../config/redis');
+const { getRedisClient, deleteByPattern } = require('../config/redis');
 
-const CACHE_TTL = 600; // 10 minutes in seconds
+const CACHE_TTL = Number(process.env.LISTINGS_CACHE_TTL || 600); // seconds
 
 /**
  * Build a Redis cache key from the query parameters.
@@ -109,11 +109,7 @@ const createListing = async (req, res, next) => {
     });
 
     // Invalidate city cache so updated listings are returned
-    const redis = getRedisClient();
-    if (redis) {
-      const keys = await redis.keys(`listings:${city.toLowerCase()}*`);
-      if (keys.length > 0) await redis.del(keys);
-    }
+    await deleteByPattern('listings:*');
 
     res.status(201).json({ success: true, message: 'Listing created.', data: listing });
   } catch (error) {
@@ -152,11 +148,7 @@ const updateListing = async (req, res, next) => {
     });
 
     // Invalidate cache for affected city
-    const redis = getRedisClient();
-    if (redis) {
-      const keys = await redis.keys(`listings:${listing.city}*`);
-      if (keys.length > 0) await redis.del(keys);
-    }
+    await deleteByPattern('listings:*');
 
     res.status(200).json({ success: true, message: 'Listing updated.', data: updated });
   } catch (error) {
@@ -184,11 +176,7 @@ const deleteListing = async (req, res, next) => {
     await listing.deleteOne();
 
     // Invalidate cache
-    const redis = getRedisClient();
-    if (redis) {
-      const keys = await redis.keys(`listings:${listing.city}*`);
-      if (keys.length > 0) await redis.del(keys);
-    }
+    await deleteByPattern('listings:*');
 
     res.status(200).json({ success: true, message: 'Listing deleted.' });
   } catch (error) {

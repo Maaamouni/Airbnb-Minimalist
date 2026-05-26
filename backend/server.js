@@ -4,7 +4,7 @@ const express = require('express');
 const cors = require('cors');
 
 const connectDB = require('./config/db');
-const { connectRedis } = require('./config/redis');
+const { connectRedis, isRedisReady } = require('./config/redis');
 const errorHandler = require('./middlewares/errorHandler');
 
 // Route imports
@@ -34,6 +34,7 @@ app.get('/health', (req, res) => {
     success: true,
     message: 'Airbnb API is running',
     environment: process.env.NODE_ENV,
+    redis: isRedisReady() ? 'connected' : 'disabled',
     timestamp: new Date().toISOString(),
   });
 });
