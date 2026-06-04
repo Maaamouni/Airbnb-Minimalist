@@ -4,6 +4,7 @@ import { formatCity, formatMoney } from '../utils/format';
 
 export default function ListingCard({ listing, onSelect }) {
   const image = listing.images?.[0];
+  const isDemo = listing._id?.startsWith('demo-');
 
   return (
     <article className="group overflow-hidden rounded-lg border border-line bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-soft">
@@ -28,10 +29,19 @@ export default function ListingCard({ listing, onSelect }) {
                 {formatCity(listing.city)}
               </p>
             </div>
-            <span className="flex items-center gap-1 text-sm font-medium text-ink">
-              <Star size={14} fill="currentColor" aria-hidden="true" />
-              4.8
-            </span>
+            <div className="flex flex-col items-end gap-2">
+              <span
+                className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                  isDemo ? 'bg-amber-50 text-amber-800' : 'bg-forest/10 text-forest'
+                }`}
+              >
+                {isDemo ? 'Demo' : 'Real'}
+              </span>
+              <span className="flex items-center gap-1 text-sm font-medium text-ink">
+                <Star size={14} fill="currentColor" aria-hidden="true" />
+                4.8
+              </span>
+            </div>
           </div>
           <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted">{listing.description}</p>
           <p className="text-sm text-muted">

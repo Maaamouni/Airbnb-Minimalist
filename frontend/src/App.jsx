@@ -19,6 +19,26 @@ const getSavedUser = () => {
   }
 };
 
+const normalizeFilters = (nextFilters) => ({
+  city: nextFilters.city.trim(),
+  minPrice: nextFilters.minPrice,
+  maxPrice: nextFilters.maxPrice,
+});
+
+const filterDemoListings = (nextFilters) => {
+  const city = nextFilters.city.trim().toLowerCase();
+  const minPrice = nextFilters.minPrice ? Number(nextFilters.minPrice) : null;
+  const maxPrice = nextFilters.maxPrice ? Number(nextFilters.maxPrice) : null;
+
+  return fallbackListings.filter((listing) => {
+    const matchesCity = city ? listing.city.toLowerCase().includes(city) : true;
+    const matchesMin = minPrice !== null ? Number(listing.price) >= minPrice : true;
+    const matchesMax = maxPrice !== null ? Number(listing.price) <= maxPrice : true;
+
+    return matchesCity && matchesMin && matchesMax;
+  });
+};
+
 export default function App() {
   const [page, setPage] = useState('home');
   const [user, setUser] = useState(getSavedUser);
@@ -27,19 +47,23 @@ export default function App() {
   const [selectedListing, setSelectedListing] = useState(null);
   const [loading, setLoading] = useState(false);
   const [usingDemoData, setUsingDemoData] = useState(false);
+  const [apiUnavailable, setApiUnavailable] = useState(false);
 
   const activePage = useMemo(() => (selectedListing ? 'home' : page), [page, selectedListing]);
 
   const loadListings = async (nextFilters = filters) => {
     setLoading(true);
+    const cleanFilters = normalizeFilters(nextFilters);
     try {
-      const payload = await listingsApi.search(nextFilters);
+      const payload = await listingsApi.search(cleanFilters);
       const apiListings = payload.data || [];
-      setListings(apiListings.length ? apiListings : fallbackListings);
-      setUsingDemoData(!apiListings.length);
+      setListings(apiListings);
+      setUsingDemoData(false);
+      setApiUnavailable(false);
     } catch {
-      setListings(fallbackListings);
+      setListings(filterDemoListings(cleanFilters));
       setUsingDemoData(true);
+      setApiUnavailable(true);
     } finally {
       setLoading(false);
     }
@@ -98,6 +122,7 @@ export default function App() {
           listings={listings}
           loading={loading}
           usingDemoData={usingDemoData}
+          apiUnavailable={apiUnavailable}
           onSearch={search}
           onSelectListing={setSelectedListing}
         />

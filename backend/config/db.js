@@ -1,17 +1,29 @@
 const mongoose = require('mongoose');
 
+const MAX_MONGO_RETRIES = 10;
+const RETRY_DELAY_MS = 5000;
+
 /**
  * Connect to MongoDB using the URI from environment variables.
- * Exits process on failure to prevent app from running without DB.
+ * Retry during startup when MongoDB is not yet ready.
  */
 const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 });
-    console.log(`MongoDB connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`MongoDB connection error: ${error.message}`);
-    console.error("Make sure MongoDB is running on 127.0.0.1:27017 or update MONGO_URI in backend/.env.");
-    process.exit(1); // Exit with failure code
+  for (let attempt = 1; attempt <= MAX_MONGO_RETRIES; attempt += 1) {
+    try {
+      const conn = await mongoose.connect(process.env.MONGO_URI, {
+        serverSelectionTimeoutMS: 5000,
+      });
+      console.log(`MongoDB connected: ${conn.connection.host}`);
+      return;
+    } catch (error) {
+      console.error(`MongoDB connection attempt ${attempt}/${MAX_MONGO_RETRIES} failed: ${error.message}`);
+      if (attempt === MAX_MONGO_RETRIES) {
+        console.error('Unable to connect to MongoDB after multiple attempts.');
+        process.exit(1);
+      }
+      console.log(`Retrying MongoDB connection in ${RETRY_DELAY_MS / 1000}s...`);
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    }
   }
 };
 

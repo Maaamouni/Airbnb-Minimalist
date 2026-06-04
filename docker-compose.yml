@@ -1,0 +1,119 @@
+services:
+  mongo1:
+    image: mongo:7
+    container_name: mongo1
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo1_data:/data/db
+    command: [ "mongod", "--replSet", "rs0", "--bind_ip_all" ]
+
+  mongo2:
+    image: mongo:7
+    container_name: mongo2
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo2_data:/data/db
+    command: [ "mongod", "--replSet", "rs0", "--bind_ip_all" ]
+
+  mongo3:
+    image: mongo:7
+    container_name: mongo3
+    restart: unless-stopped
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo3_data:/data/db
+    command: [ "mongod", "--replSet", "rs0", "--bind_ip_all" ]
+
+  mongo-init:
+    image: mongo:7
+    container_name: mongo-init
+    restart: "no"
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+    command: >
+      bash -c "
+        echo 'Waiting for mongo1 to be ready...'
+        until mongosh --host mongo1:27017 --eval 'print(\"wait\")'; do
+          sleep 2
+        done
+        echo 'Initializing Replica Set...'
+        mongosh --host mongo1:27017 --eval '
+          try {
+            var s = rs.status();
+            print(\"Replica set already initialized\");
+          } catch (e) {
+            rs.initiate({
+              _id: \"rs0\",
+              members: [
+                {_id: 0, host: \"mongo1:27017\"},
+                {_id: 1, host: \"mongo2:27017\"},
+                {_id: 2, host: \"mongo3:27017\"}
+              ]
+            });
+            print(\"Replica set initialized successfully\");
+          }
+        '
+      "
+
+  redis:
+    image: redis:7-alpine
+    container_name: airbnb-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build:
+      context: ./backend
+    container_name: airbnb-backend
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    environment:
+      PORT: 5000
+      NODE_ENV: development
+      MONGO_URI: mongodb://mongo1:27017,mongo2:27017,mongo3:27017/airbnb?replicaSet=rs0
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: your_super_secret_jwt_key_change_in_production
+      JWT_EXPIRES_IN: 7d
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+      - mongo-init
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: airbnb-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:5001
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  mongo1_data:
+  mongo2_data:
+  mongo3_data:
+  redis_data:
+  backend_node_modules:
+  frontend_node_modules:

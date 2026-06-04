@@ -163,3 +163,102 @@ Phase 4:
 
 Phase 5:
 - UI improvement
+
+## Run with Docker
+
+The project includes a Docker Compose setup for:
+
+- frontend React/Vite
+- backend Express API
+- MongoDB
+- Redis
+
+Start everything:
+
+```bash
+docker compose up --build
+```
+
+Run in background:
+
+```bash
+docker compose up -d --build
+```
+
+Open the app:
+
+```text
+Frontend: http://localhost:5173
+Backend:  http://localhost:5001
+Health:   http://localhost:5001/health
+```
+
+Stop containers:
+
+```bash
+docker compose down
+```
+
+Stop containers and delete MongoDB/Redis data volumes:
+
+```bash
+docker compose down -v
+```
+
+View logs:
+
+```bash
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f mongo
+docker compose logs -f redis
+```
+
+Access MongoDB shell:
+
+```bash
+docker compose exec mongo mongosh
+```
+
+Inside `mongosh`:
+
+```js
+show dbs
+use airbnb
+show collections
+db.listings.find()
+```
+
+Access Redis CLI:
+
+```bash
+docker compose exec redis redis-cli
+```
+
+The backend uses service names inside Docker:
+
+```env
+MONGO_URI=mongodb://mongo:27017/airbnb
+REDIS_URL=redis://redis:6379
+```
+
+The frontend still uses the host URL because the browser calls the API from your machine:
+
+```env
+VITE_API_URL=http://localhost:5001
+```
+
+MongoDB data persists in the Docker volume `mongo_data`. Redis data persists in `redis_data`.
+
+If you already created a manual MongoDB container named `airbnb-mongo`, Compose cannot create another container with the same name. Keep the data volume and remove only the old container:
+
+```bash
+docker stop airbnb-mongo
+docker rm airbnb-mongo
+docker compose up -d --build
+```
+
+This Compose file reuses the existing Docker volume named `airbnb-volume` for MongoDB data.
+
+
+!! redis sert juste a accelerer la recherche des logements
