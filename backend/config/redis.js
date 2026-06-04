@@ -44,8 +44,13 @@ const deleteByPattern = async (pattern) => {
   if (!redis) return 0;
 
   const keys = [];
-  for await (const key of redis.scanIterator({ MATCH: pattern, COUNT: 100 })) {
-    keys.push(key);
+  for await (const item of redis.scanIterator({ MATCH: pattern, COUNT: 100 })) {
+    // Some versions yield an array of keys per iteration, others yield individual strings
+    if (Array.isArray(item)) {
+      keys.push(...item);
+    } else {
+      keys.push(item);
+    }
   }
 
   if (!keys.length) return 0;

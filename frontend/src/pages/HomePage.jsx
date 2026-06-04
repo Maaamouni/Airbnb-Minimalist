@@ -9,6 +9,7 @@ export default function HomePage({
   listings,
   loading,
   usingDemoData,
+  apiUnavailable,
   onSearch,
   onSelectListing,
 }) {
@@ -75,12 +76,18 @@ export default function HomePage({
           <div>
             <h2 className="text-2xl font-semibold text-ink">Available homes</h2>
             <p className="mt-1 text-sm text-muted">
-              {usingDemoData ? 'Showing demo data until your API has listings.' : `${listings.length} listing(s) from API`}
+              {usingDemoData
+                ? 'Backend unavailable. Showing filtered demo listings only.'
+                : `${listings.length} real listing(s) from MongoDB`}
             </p>
           </div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3 py-2 text-sm text-muted">
+          <span
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm ${
+              apiUnavailable ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-line bg-white text-muted'
+            }`}
+          >
             <SlidersHorizontal size={15} aria-hidden="true" />
-            City and price filters
+            {apiUnavailable ? 'Demo mode' : 'City and price filters'}
           </span>
         </div>
 
